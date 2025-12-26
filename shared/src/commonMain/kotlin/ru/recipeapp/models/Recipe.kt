@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Recipe(
-    val id: Int? = null,
+    val id: Int,
     val title: String,
     val ingredients: String,
     val description: String,
-    val authorEmail: String
+    val authorLogin: String
 )

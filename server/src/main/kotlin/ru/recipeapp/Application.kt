@@ -41,7 +41,7 @@ fun Application.module() {
                         title = it[RecipesTable.title],
                         ingredients = it[RecipesTable.ingredients],
                         description = it[RecipesTable.description],
-                        authorEmail = it[RecipesTable.authorEmail]
+                        authorLogin = it[RecipesTable.authorLogin]
                     )
                 }
             }
