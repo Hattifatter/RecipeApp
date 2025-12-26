@@ -8,4 +8,11 @@ interface RecipesRepository {
     suspend fun getMenu(query: String, filters: RecipeFilters): List<RecipeCardUi>
     suspend fun getRecipe(id: Long): RecipeUi?
     suspend fun toggleFavorite(id: Long)
+
+    suspend fun createRecipe(
+        title: String,
+        description: String,
+        ingredients: List<String>,
+        author: String
+    ): Long
 }

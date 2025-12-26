@@ -21,6 +21,8 @@ import ru.recipeapp.navigation.rememberNavState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import ru.recipeapp.features.recipes.CreateRecipeScreen
+
 
 
 @Composable
@@ -67,9 +69,10 @@ fun AppRoot() {
             // Вкладка Menu сама рисует свою шапку (SearchHeaderBar),
             // поэтому AppTopBar там НЕ показываем, иначе будет двойная шапка.
             val showTopBar = when (route) {
-                is Route.Main -> route.tab != MainTab.Menu
+                is Route.Main -> route.tab != MainTab.Menu && route.tab != MainTab.Add
                 else -> true
             }
+
 
             Scaffold(
                 topBar = {
@@ -101,10 +104,15 @@ fun AppRoot() {
                                 modifier = Modifier.padding(padding)
                             )
 
-                            MainTab.Add -> {
-                                // пока заглушка (или можно сразу подключить AddEditRecipeScreen — скажи, если надо)
-                                Text("Экран добавления — позже", modifier = Modifier.padding(padding))
-                            }
+                            MainTab.Add -> CreateRecipeScreen(
+                                repository = recipesRepo,
+                                authorLogin = SampleData.userLogin, // пока так; потом возьмёшь из auth
+                                onCreated = { _ ->
+                                    nav.replace(Route.Main(MainTab.Menu)) // после добавления кидаем в меню
+                                },
+                                modifier = Modifier.padding(padding)
+                            )
+
 
                             MainTab.Favorites -> {
                                 // пока заглушка

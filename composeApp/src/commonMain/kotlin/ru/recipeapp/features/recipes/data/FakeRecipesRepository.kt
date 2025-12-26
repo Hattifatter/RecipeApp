@@ -5,6 +5,7 @@ import ru.recipeapp.features.recipes.RecipeCardUi
 import ru.recipeapp.features.recipes.RecipeFilters
 import ru.recipeapp.features.recipes.DurationFilter
 
+
 class FakeRecipesRepository : RecipesRepository {
 
     private data class Meta(
@@ -12,6 +13,7 @@ class FakeRecipesRepository : RecipesRepository {
         val duration: DurationFilter,
         val durationText: String
     )
+
 
     // Метаданные (категория/время) по id
     private var metaById: MutableMap<Long, Meta> = mutableMapOf()
@@ -127,6 +129,30 @@ class FakeRecipesRepository : RecipesRepository {
         return variants[((id - 1) % variants.size).toInt()]
     }
 
+
+    override suspend fun createRecipe(
+        title: String,
+        description: String,
+        ingredients: List<String>,
+        author: String
+    ): Long {
+        val nextId = (full.maxOfOrNull { it.id } ?: 0L) + 1L
+
+        val newRecipe = RecipeUi(
+            id = nextId,
+            title = title,
+            description = description,
+            ingredients = ingredients,
+            author = author,
+            isFavorite = false
+        )
+
+        full = listOf(newRecipe) + full
+
+        metaById[nextId] = pickMeta(nextId)
+
+        return nextId
+    }
 
 
     override suspend fun getMenu(query: String, filters: RecipeFilters): List<RecipeCardUi> {
