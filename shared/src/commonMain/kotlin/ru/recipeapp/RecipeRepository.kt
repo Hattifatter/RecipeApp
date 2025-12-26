@@ -1,0 +1,17 @@
+package ru.recipeapp.repository
+
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import ru.recipeapp.models.Recipe
+
+class RecipeRepository(private val client: HttpClient) {
+    suspend fun getRecipes(): List<Recipe> {
+        return try {
+            // Запрашиваем список рецептов у сервера
+            client.get("http://10.0.2.2:8080/recipes").body()
+        } catch (e: Exception) {
+            emptyList() // Если сервер спит, возвращаем пустой список
+        }
+    }
+}
