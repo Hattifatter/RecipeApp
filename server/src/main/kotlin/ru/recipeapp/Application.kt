@@ -15,8 +15,12 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import ru.recipeapp.models.Recipe
 import ru.recipeapp.models.LoginRequest
 
-// ВАЖНО: Если UsersTable и RecipesTable в другом файле,
-// убедись, что они доступны здесь (импортированы).
+// Описание таблицы избранного (связка пользователя и рецепта)
+object SavedRecipesTable : Table("saved_recipes") {
+    val userLogin = varchar("user_login", 50).references(UsersTable.login)
+    val recipeId = integer("recipe_id").references(RecipesTable.id)
+    override val primaryKey = PrimaryKey(userLogin, recipeId)
+}
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
@@ -31,7 +35,6 @@ fun Application.module() {
         })
     }
 
-
     initDatabase()
 
     routing {
@@ -39,7 +42,7 @@ fun Application.module() {
             call.respondText("Сервер запущен!")
         }
 
-        // Получение всех рецептов
+        // 1. ЛЕНТА: Получение всех рецептов
         get("/recipes") {
             val recipes = transaction {
                 RecipesTable.selectAll().map {
@@ -55,7 +58,44 @@ fun Application.module() {
             call.respond(recipes)
         }
 
-        // Вход пользователя
+        // 2. ИЗБРАННОЕ: Сохранить рецепт к себе в профиль
+        post("/recipes/save") {
+            try {
+                val params = call.receive<Map<String, String>>()
+                val login = params["login"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val id = params["recipeId"]?.toInt() ?: return@post call.respond(HttpStatusCode.BadRequest)
+
+                transaction {
+                    SavedRecipesTable.insertIgnore {
+                        it[userLogin] = login
+                        it[recipeId] = id
+                    }
+                }
+                call.respond(HttpStatusCode.OK, "Рецепт сохранен")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Ошибка: ${e.message}")
+            }
+        }
+
+        // 3. ПРОФИЛЬ: Получить только сохраненные рецепты пользователя
+        get("/recipes/saved/{login}") {
+            val login = call.parameters["login"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val saved = transaction {
+                (RecipesTable innerJoin SavedRecipesTable)
+                    .select { SavedRecipesTable.userLogin eq login }
+                    .map {
+                        Recipe(
+                            id = it[RecipesTable.id],
+                            title = it[RecipesTable.title],
+                            ingredients = it[RecipesTable.ingredients],
+                            description = it[RecipesTable.description],
+                            authorLogin = it[RecipesTable.authorLogin]
+                        )
+                    }
+            }
+            call.respond(saved)
+        }
+
         post("/login") {
             val request = call.receive<LoginRequest>()
             val userPassword = transaction {
@@ -71,7 +111,6 @@ fun Application.module() {
             }
         }
 
-        // Регистрация пользователя
         post("/register") {
             val request = call.receive<LoginRequest>()
             val registrationResult = transaction {
@@ -94,7 +133,6 @@ fun Application.module() {
             }
         }
 
-        // Добавление нового рецепта
         post("/recipes") {
             try {
                 val recipe = call.receive<Recipe>()
@@ -123,6 +161,7 @@ fun initDatabase() {
     )
 
     transaction {
-        SchemaUtils.create(UsersTable, RecipesTable)
+        // Добавили новую таблицу в список создания
+        SchemaUtils.create(UsersTable, RecipesTable, SavedRecipesTable)
     }
 }

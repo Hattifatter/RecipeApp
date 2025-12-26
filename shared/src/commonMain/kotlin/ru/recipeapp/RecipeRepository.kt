@@ -26,4 +26,25 @@ class RecipeRepository(private val client: HttpClient) {
             false
         }
     }
+    // Сохранить рецепт
+    suspend fun saveRecipe(login: String, recipeId: Int): Boolean {
+        return try {
+            val response = client.post("http://10.0.2.2:8080/recipes/save") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("login" to login, "recipeId" to recipeId.toString()))
+            }
+            response.status == HttpStatusCode.OK
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Получить список избранного
+    suspend fun getSavedRecipes(login: String): List<Recipe> {
+        return try {
+            client.get("http://10.0.2.2:8080/recipes/saved/$login").body()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }
