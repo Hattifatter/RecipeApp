@@ -18,6 +18,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
+            implementation("io.ktor:ktor-client-core:2.3.0")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.0")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
