@@ -21,7 +21,7 @@ import ru.recipeapp.navigation.rememberNavState
 @Composable
 fun AppRoot() {
     // Для быстрого старта можешь поставить Route.Main(), а Auth включить потом:
-    val nav = rememberNavState(initial = Route.Main())
+    val nav = rememberNavState(initial = Route.Auth)
 
     var recipes by remember { mutableStateOf(SampleData.recipes) }
     var nextId by remember { mutableStateOf((recipes.maxOfOrNull { it.id } ?: 0L) + 1L) }
