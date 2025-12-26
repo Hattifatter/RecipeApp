@@ -21,6 +21,7 @@ fun SearchHeaderBar(
     placeholder: String,
     onBack: (() -> Unit)?,
     onFilterClick: () -> Unit,
+    hasActiveFilters: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -92,15 +93,29 @@ fun SearchHeaderBar(
             Spacer(Modifier.width(10.dp))
 
             // Фильтр (заглушка)
-            Text(
-                text = "☰",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = Color.Black,
+            Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .wrapContentSize(Alignment.Center)
-                    .clickable { onFilterClick() }
-            )
+                    .clickable { onFilterClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "☰",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color.Black
+                )
+
+                if (hasActiveFilters) {
+                    // маленькая точка-индикатор
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(8.dp)
+                            .background(ru.recipeapp.designsystem.theme.AppColors.BrandGreen, CircleShape)
+                    )
+                }
+            }
+
         }
 
         HorizontalDivider(color = AppColors.Divider, thickness = 1.dp)

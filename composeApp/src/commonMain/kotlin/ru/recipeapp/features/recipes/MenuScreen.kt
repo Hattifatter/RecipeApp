@@ -2,18 +2,17 @@ package ru.recipeapp.features.recipes
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.AlertDialog
+import ru.recipeapp.features.recipes.components.FiltersDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import recipeapp.composeapp.generated.resources.Res
 import recipeapp.composeapp.generated.resources.compose_multiplatform
@@ -47,44 +46,57 @@ fun MenuScreen(
             query = query,
             onQueryChange = { query = it },
             placeholder = "Поиск",
-            onBack = onBack, // можешь передать null, если на этом экране “назад” не нужен
-            onFilterClick = { showFiltersDialog = true }
+            onBack = onBack,
+            onFilterClick = { showFiltersDialog = true },
+            hasActiveFilters = filters.isActive
         )
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 14.dp, end = 14.dp,
-                top = 14.dp,
-                bottom = 92.dp // чтобы карточки не прятались под нижнее меню
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            items(items, key = { it.id }) { r ->
-                RecipeGridCard(
-                    item = r,
-                    painter = placeholderPainter,
-                    onClick = { onRecipeClick(r.id) }
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Нет рецептов",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 14.dp, end = 14.dp,
+                    top = 14.dp,
+                    bottom = 92.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(items, key = { it.id }) { r ->
+                    RecipeGridCard(
+                        item = r,
+                        painter = placeholderPainter,
+                        onClick = { onRecipeClick(r.id) }
+                    )
+                }
             }
         }
     }
 
     if (showFiltersDialog) {
-        AlertDialog(
-            onDismissRequest = { showFiltersDialog = false },
-            confirmButton = {
-                TextButton(onClick = { showFiltersDialog = false }) { Text("Ок") }
+        FiltersDialog(
+            current = filters,
+            categories = listOf("Фастфуд", "Завтрак", "Обед", "Ужин", "Десерт", "Суп", "ПП", "Салат"),
+            onApply = {
+                filters = it
+                showFiltersDialog = false
             },
-            title = { Text("Фильтры") },
-            text = {
-                Text(
-                    "Пока заглушка. Потом сюда подключим реальные фильтры.\n\n" +
-                            "Сейчас можно просто оставить UI-кнопку и не ломать верстку."
-                )
-            }
+            onDismiss = { showFiltersDialog = false }
         )
     }
+
 }

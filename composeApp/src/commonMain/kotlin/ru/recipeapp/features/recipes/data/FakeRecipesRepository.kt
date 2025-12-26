@@ -3,11 +3,13 @@ package ru.recipeapp.features.recipes.data
 import ru.recipeapp.features.recipes.RecipeUi
 import ru.recipeapp.features.recipes.RecipeCardUi
 import ru.recipeapp.features.recipes.RecipeFilters
+import ru.recipeapp.features.recipes.DurationFilter
 
 class FakeRecipesRepository : RecipesRepository {
 
     private data class Meta(
         val category: String,
+        val duration: DurationFilter,
         val durationText: String
     )
 
@@ -112,19 +114,20 @@ class FakeRecipesRepository : RecipesRepository {
     }
 
     private fun pickMeta(id: Long): Meta {
-        // Разные категории/время — по кругу, детерминированно
         val variants = listOf(
-            Meta("Фастфуд", "15–30мин"),
-            Meta("Завтрак", "10–15мин"),
-            Meta("Обед", "30–60мин"),
-            Meta("Ужин", ">60мин"),
-            Meta("Десерт", "30–60мин"),
-            Meta("Суп", ">60мин"),
-            Meta("ПП", "15–30мин"),
-            Meta("Салат", "10–15мин"),
+            Meta("Фастфуд", DurationFilter.UpTo30, "15–30мин"),
+            Meta("Завтрак", DurationFilter.UpTo15, "10–15мин"),
+            Meta("Обед", DurationFilter.UpTo60, "30–60мин"),
+            Meta("Ужин", DurationFilter.Over60, ">60мин"),
+            Meta("Десерт", DurationFilter.UpTo60, "30–60мин"),
+            Meta("Суп", DurationFilter.Over60, ">60мин"),
+            Meta("ПП", DurationFilter.UpTo30, "15–30мин"),
+            Meta("Салат", DurationFilter.UpTo15, "10–15мин"),
         )
         return variants[((id - 1) % variants.size).toInt()]
     }
+
+
 
     override suspend fun getMenu(query: String, filters: RecipeFilters): List<RecipeCardUi> {
         val q = query.trim()
@@ -137,6 +140,13 @@ class FakeRecipesRepository : RecipesRepository {
                         it.ingredients.any { ing -> ing.contains(q, ignoreCase = true) }
             }
         }
+        if (filters.duration != ru.recipeapp.features.recipes.DurationFilter.Any) {
+            result = result.filter { r ->
+                val meta = metaById[r.id]
+                meta?.duration == filters.duration
+            }
+        }
+
 
         // Простейшая заглушка фильтра по категории
         filters.category?.let { cat ->
