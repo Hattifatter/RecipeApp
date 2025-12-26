@@ -21,4 +21,16 @@ class AuthRepository(private val client: HttpClient) {
             false
         }
     }
+
+    suspend fun register(login: String, pass: String): Boolean {
+        return try {
+            val response = client.post("http://10.0.2.2:8080/register") {
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(login = login, password = pass))
+            }
+            response.status == HttpStatusCode.Created
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

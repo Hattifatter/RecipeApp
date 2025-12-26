@@ -13,15 +13,13 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import ru.recipeapp.models.Recipe
 import ru.recipeapp.models.LoginRequest
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-
-// 2. Главная функция запуска
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
-// 3. Основной модуль сервера
 fun Application.module() {
     install(ContentNegotiation) {
         json()
@@ -63,10 +61,35 @@ fun Application.module() {
                 call.respond(HttpStatusCode.Unauthorized, "Неверный логин или пароль")
             }
         }
+
+        post("/register") {
+            val request = call.receive<LoginRequest>()
+
+            // 1. Работа с БД строго в транзакции (без suspension функций внутри)
+            val registrationResult = transaction {
+                val userExists = UsersTable.select { UsersTable.login eq request.login }.any()
+
+                if (userExists) {
+                    false
+                } else {
+                    UsersTable.insert {
+                        it[login] = request.login
+                        it[password] = request.password
+                    }
+                    true
+                }
+            }
+
+            // 2. Ответ клиенту ВНЕ транзакции (решает ошибку Suspension functions)
+            if (registrationResult) {
+                call.respond(HttpStatusCode.Created, "Регистрация успешна")
+            } else {
+                call.respond(HttpStatusCode.Conflict, "Пользователь уже существует")
+            }
+        }
     }
 }
 
-// 4. Инициализация базы данных (объявлена ОДИН раз в конце файла)
 fun initDatabase() {
     Database.connect(
         url = "jdbc:postgresql://localhost:5432/recipe_db",
@@ -76,6 +99,7 @@ fun initDatabase() {
     )
 
     transaction {
+        // Создаем таблицы, если их еще нет
         SchemaUtils.create(UsersTable, RecipesTable)
     }
 }
