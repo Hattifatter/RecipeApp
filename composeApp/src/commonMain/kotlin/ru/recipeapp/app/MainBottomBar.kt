@@ -2,8 +2,11 @@ package ru.recipeapp.app
 
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import ru.recipeapp.designsystem.theme.AppColors
 import ru.recipeapp.navigation.MainTab
 
 @Composable
@@ -11,24 +14,39 @@ fun MainBottomBar(
     selected: MainTab,
     onSelect: (MainTab) -> Unit
 ) {
-    NavigationBar {
-        NavigationBarItem(
-            selected = selected == MainTab.Recipes,
-            onClick = { onSelect(MainTab.Recipes) },
-            icon = { Text("🍲") },
-            label = { Text("Рецепты") }
+    NavigationBar(
+        containerColor = Color.White
+    ) {
+        val colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = AppColors.BrandGreen,
+            selectedTextColor = AppColors.BrandGreen,
+            unselectedIconColor = AppColors.InactiveGray,
+            unselectedTextColor = AppColors.InactiveGray,
+            indicatorColor = Color.Transparent
         )
+
+        NavigationBarItem(
+            selected = selected == MainTab.Add,
+            onClick = { onSelect(MainTab.Add) },
+            icon = { Text("✎") }, // потом заменишь на иконку
+            label = { Text("Добавить") },
+            colors = colors
+        )
+
+        NavigationBarItem(
+            selected = selected == MainTab.Menu,
+            onClick = { onSelect(MainTab.Menu) },
+            icon = { Text("⌂") },
+            label = { Text("Меню") },
+            colors = colors
+        )
+
         NavigationBarItem(
             selected = selected == MainTab.Favorites,
             onClick = { onSelect(MainTab.Favorites) },
             icon = { Text("★") },
-            label = { Text("Избранное") }
-        )
-        NavigationBarItem(
-            selected = selected == MainTab.Profile,
-            onClick = { onSelect(MainTab.Profile) },
-            icon = { Text("👤") },
-            label = { Text("Профиль") }
+            label = { Text("Любимое") },
+            colors = colors
         )
     }
 }

@@ -1,5 +1,7 @@
 package ru.recipeapp.app
 
+import ru.recipeapp.features.recipes.data.FakeRecipesRepository
+import ru.recipeapp.features.recipes.data.RecipesRepository
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -7,21 +9,26 @@ import androidx.compose.ui.Modifier
 import ru.recipeapp.data.SampleData
 import ru.recipeapp.designsystem.components.AppTopBar
 import ru.recipeapp.features.auth.AuthScreen
-import ru.recipeapp.features.favorites.FavoritesScreen
-import ru.recipeapp.features.profile.ProfileScreen
 import ru.recipeapp.features.profile.SettingsScreen
 import ru.recipeapp.features.recipes.AddEditRecipeScreen
+import ru.recipeapp.features.recipes.MenuScreen
 import ru.recipeapp.features.recipes.RecipeDetailsScreen
-import ru.recipeapp.features.recipes.RecipeListScreen
 import ru.recipeapp.features.recipes.RecipeUi
+import androidx.compose.runtime.produceState
 import ru.recipeapp.navigation.MainTab
 import ru.recipeapp.navigation.Route
 import ru.recipeapp.navigation.rememberNavState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 
 @Composable
 fun AppRoot() {
-    // Для быстрого старта можешь поставить Route.Main(), а Auth включить потом:
     val nav = rememberNavState(initial = Route.Auth)
+
+    // Заглушки данных
+    val recipesRepo: RecipesRepository = remember { FakeRecipesRepository() }
 
     var recipes by remember { mutableStateOf(SampleData.recipes) }
     var nextId by remember { mutableStateOf((recipes.maxOfOrNull { it.id } ?: 0L) + 1L) }
@@ -34,9 +41,7 @@ fun AppRoot() {
 
     when (val route = nav.current) {
         Route.Auth -> {
-            AuthScreen(
-                onSuccess = { nav.reset(Route.Main()) }
-            )
+            AuthScreen(onSuccess = { nav.reset(Route.Main()) })
         }
 
         is Route.Main,
@@ -44,34 +49,36 @@ fun AppRoot() {
         is Route.AddEditRecipe,
         Route.Settings -> {
 
-            val topBarTitle = when (route) {
+            // Заголовки (для вкладки Menu он сейчас не используется, там своя шапка SearchHeaderBar)
+            val topBarTitle: String = when (route) {
                 is Route.Main -> when (route.tab) {
-                    MainTab.Recipes -> "Рецепты"
-                    MainTab.Favorites -> "Избранное"
-                    MainTab.Profile -> "Профиль"
+                    MainTab.Add -> "Добавить"
+                    MainTab.Menu -> "Меню"
+                    MainTab.Favorites -> "Любимое"
                 }
                 is Route.RecipeDetails -> "Рецепт"
                 is Route.AddEditRecipe -> if (route.recipeId == null) "Новый рецепт" else "Редактирование"
                 Route.Settings -> "Настройки"
-                Route.Auth -> "" // сюда не попадём
+                Route.Auth -> "" // сюда не попадаем из этой ветки
             }
 
             val showBottomBar = route is Route.Main
-            val showFab = route is Route.Main && route.tab == MainTab.Recipes
+
+            // Вкладка Menu сама рисует свою шапку (SearchHeaderBar),
+            // поэтому AppTopBar там НЕ показываем, иначе будет двойная шапка.
+            val showTopBar = when (route) {
+                is Route.Main -> route.tab != MainTab.Menu
+                else -> true
+            }
 
             Scaffold(
                 topBar = {
-                    AppTopBar(
-                        title = topBarTitle,
-                        onBack = if (nav.canGoBack && route !is Route.Main) ({ nav.pop() }) else null,
-                        actions = {
-                            if (route is Route.Main && route.tab == MainTab.Profile) {
-                                TextButton(onClick = { nav.navigate(Route.Settings) }) {
-                                    Text("⚙")
-                                }
-                            }
-                        }
-                    )
+                    if (showTopBar) {
+                        AppTopBar(
+                            title = topBarTitle,
+                            onBack = if (nav.canGoBack && route !is Route.Main) ({ nav.pop() }) else null
+                        )
+                    }
                 },
                 bottomBar = {
                     if (showBottomBar) {
@@ -81,53 +88,50 @@ fun AppRoot() {
                             onSelect = { nav.replace(Route.Main(it)) }
                         )
                     }
-                },
-                floatingActionButton = {
-                    if (showFab) {
-                        FloatingActionButton(onClick = { nav.navigate(Route.AddEditRecipe()) }) {
-                            Text("+")
-                        }
-                    }
                 }
             ) { padding ->
+
                 when (route) {
-                    is Route.Main -> when (route.tab) {
-                        MainTab.Recipes -> RecipeListScreen(
-                            recipes = recipes,
-                            onRecipeClick = { nav.navigate(Route.RecipeDetails(it)) },
-                            onToggleFavorite = { toggleFavorite(it) },
-                            modifier = Modifier.padding(padding)
-                        )
+                    is Route.Main -> {
+                        when (route.tab) {
+                            MainTab.Menu -> MenuScreen(
+                                repository = recipesRepo,
+                                onBack = null,
+                                onRecipeClick = { id -> nav.navigate(Route.RecipeDetails(id)) },
+                                modifier = Modifier.padding(padding)
+                            )
 
-                        MainTab.Favorites -> FavoritesScreen(
-                            favorites = recipes.filter { it.isFavorite },
-                            onRecipeClick = { nav.navigate(Route.RecipeDetails(it)) },
-                            onToggleFavorite = { toggleFavorite(it) },
-                            modifier = Modifier.padding(padding)
-                        )
+                            MainTab.Add -> {
+                                // пока заглушка (или можно сразу подключить AddEditRecipeScreen — скажи, если надо)
+                                Text("Экран добавления — позже", modifier = Modifier.padding(padding))
+                            }
 
-                        MainTab.Profile -> ProfileScreen(
-                            userName = SampleData.userName,
-                            userLogin = SampleData.userLogin,
-                            onOpenSettings = { nav.navigate(Route.Settings) },
-                            onLogout = { nav.reset(Route.Auth) },
-                            modifier = Modifier.padding(padding)
-                        )
+                            MainTab.Favorites -> {
+                                // пока заглушка
+                                Text("Любимое — позже", modifier = Modifier.padding(padding))
+                            }
+                        }
                     }
 
                     is Route.RecipeDetails -> {
-                        val recipe = recipeById(route.recipeId)
+                        var recipe by remember(route.recipeId) { mutableStateOf<RecipeUi?>(null) }
+
+                        LaunchedEffect(route.recipeId) {
+                            recipe = recipesRepo.getRecipe(route.recipeId)  // suspend
+                        }
+
                         if (recipe == null) {
-                            Text("Рецепт не найден", modifier = Modifier.padding(padding))
+                            Text("Загрузка...", modifier = Modifier.padding(padding))
                         } else {
                             RecipeDetailsScreen(
-                                recipe = recipe,
-                                onEdit = { nav.navigate(Route.AddEditRecipe(recipe.id)) },
-                                onToggleFavorite = { toggleFavorite(recipe.id) },
+                                recipe = recipe!!,
+                                onEdit = { nav.navigate(Route.AddEditRecipe(recipe!!.id)) },
+                                onToggleFavorite = { /* позже: recipesRepo.toggleFavorite(recipe!!.id) */ },
                                 modifier = Modifier.padding(padding)
                             )
                         }
                     }
+
 
                     is Route.AddEditRecipe -> {
                         val initial = route.recipeId?.let(::recipeById)
