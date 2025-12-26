@@ -14,21 +14,14 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
-    
+
+    // Удалены блоки iosArm64 и iosSimulatorArm64, которые вызывали ошибки
+
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.ktor.client.android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -47,6 +40,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+        // Удалены блоки iosMain, так как мы отказались от поддержки iOS
     }
 }
 
@@ -80,4 +74,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-
