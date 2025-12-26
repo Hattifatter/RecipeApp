@@ -25,5 +25,3 @@ fun AppTopBar(
         actions = actions
     )
 }
-
-
