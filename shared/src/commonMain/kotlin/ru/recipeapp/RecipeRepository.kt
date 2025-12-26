@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import ru.recipeapp.models.Recipe
+import io.ktor.http.*
 
 class RecipeRepository(private val client: HttpClient) {
     suspend fun getRecipes(): List<Recipe> {
@@ -12,6 +13,17 @@ class RecipeRepository(private val client: HttpClient) {
             client.get("http://10.0.2.2:8080/recipes").body()
         } catch (e: Exception) {
             emptyList() // Если сервер спит, возвращаем пустой список
+        }
+    }
+    suspend fun addRecipe(recipe: Recipe): Boolean {
+        return try {
+            val response = client.post("http://10.0.2.2:8080/recipes") {
+                contentType(ContentType.Application.Json)
+                setBody(recipe)
+            }
+            response.status == HttpStatusCode.Created
+        } catch (e: Exception) {
+            false
         }
     }
 }

@@ -11,9 +11,12 @@ import io.ktor.server.request.*
 import io.ktor.http.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import ru.recipeapp.models.Recipe
 import ru.recipeapp.models.LoginRequest
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+
+// ВАЖНО: Если UsersTable и RecipesTable в другом файле,
+// убедись, что они доступны здесь (импортированы).
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
@@ -22,8 +25,12 @@ fun main() {
 
 fun Application.module() {
     install(ContentNegotiation) {
-        json()
+        json(kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        })
     }
+
 
     initDatabase()
 
@@ -32,6 +39,7 @@ fun Application.module() {
             call.respondText("Сервер запущен!")
         }
 
+        // Получение всех рецептов
         get("/recipes") {
             val recipes = transaction {
                 RecipesTable.selectAll().map {
@@ -47,6 +55,7 @@ fun Application.module() {
             call.respond(recipes)
         }
 
+        // Вход пользователя
         post("/login") {
             val request = call.receive<LoginRequest>()
             val userPassword = transaction {
@@ -62,13 +71,11 @@ fun Application.module() {
             }
         }
 
+        // Регистрация пользователя
         post("/register") {
             val request = call.receive<LoginRequest>()
-
-            // 1. Работа с БД строго в транзакции (без suspension функций внутри)
             val registrationResult = transaction {
                 val userExists = UsersTable.select { UsersTable.login eq request.login }.any()
-
                 if (userExists) {
                     false
                 } else {
@@ -80,11 +87,28 @@ fun Application.module() {
                 }
             }
 
-            // 2. Ответ клиенту ВНЕ транзакции (решает ошибку Suspension functions)
             if (registrationResult) {
                 call.respond(HttpStatusCode.Created, "Регистрация успешна")
             } else {
                 call.respond(HttpStatusCode.Conflict, "Пользователь уже существует")
+            }
+        }
+
+        // Добавление нового рецепта
+        post("/recipes") {
+            try {
+                val recipe = call.receive<Recipe>()
+                transaction {
+                    RecipesTable.insert {
+                        it[title] = recipe.title
+                        it[ingredients] = recipe.ingredients
+                        it[description] = recipe.description
+                        it[authorLogin] = recipe.authorLogin
+                    }
+                }
+                call.respond(HttpStatusCode.Created, "Рецепт добавлен")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Ошибка формата данных: ${e.message}")
             }
         }
     }
@@ -99,7 +123,6 @@ fun initDatabase() {
     )
 
     transaction {
-        // Создаем таблицы, если их еще нет
         SchemaUtils.create(UsersTable, RecipesTable)
     }
 }
