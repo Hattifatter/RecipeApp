@@ -42,7 +42,7 @@ kotlin {
             implementation(projects.shared)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.serialization.kotlinx.json.mpp)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
