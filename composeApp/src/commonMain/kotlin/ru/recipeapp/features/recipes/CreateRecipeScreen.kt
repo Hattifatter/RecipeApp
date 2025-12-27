@@ -1,5 +1,10 @@
 package ru.recipeapp.features.recipes
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.ImageBitmap
+import ru.recipeapp.platform.decodeImageBitmap
+import ru.recipeapp.platform.rememberImagePicker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +46,18 @@ fun CreateRecipeScreen(
 
     var titleError by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
+
+    var photoBytes by remember { mutableStateOf<ByteArray?>(null) }
+
+    val photoBitmap: ImageBitmap? = remember(photoBytes) {
+        photoBytes?.let { decodeImageBitmap(it) }
+    }
+
+
+    val imagePicker = rememberImagePicker { bytes ->
+        photoBytes = bytes
+    }
+
 
     fun setCount(newCount: Int) {
         val c = newCount.coerceIn(1, 20)
@@ -112,16 +130,31 @@ fun CreateRecipeScreen(
             Box(
                 modifier = Modifier
                     .size(140.dp)
-                    .background(Color(0xFF5B5B5B), RoundedCornerShape(16.dp))
-                    .clickable { /* TODO: pick image later */ },
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF5B5B5B))
+                    .clickable { imagePicker.launch() },
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🖼", color = Color.White, style = MaterialTheme.typography.headlineSmall)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Выберите фото", color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                if (photoBitmap != null) {
+                    Image(
+                        bitmap = photoBitmap!!,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop, // ✅ центр-кроп
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🖼", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Выберите фото",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
                 }
             }
+
 
             Spacer(Modifier.height(18.dp))
 
