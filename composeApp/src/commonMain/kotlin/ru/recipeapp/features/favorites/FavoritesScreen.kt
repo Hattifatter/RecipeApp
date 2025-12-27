@@ -24,6 +24,7 @@ import ru.recipeapp.features.recipes.RecipeFilters
 import ru.recipeapp.features.recipes.components.RecipeGridCard
 import ru.recipeapp.features.recipes.data.RecipesRepository
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import ru.recipeapp.features.recipes.components.RecipeFiltersDialog
 
 @Composable
@@ -37,6 +38,7 @@ fun FavoritesScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var filters by remember { mutableStateOf(RecipeFilters()) }
     var items by remember { mutableStateOf<List<RecipeCardUi>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var showFiltersDialog by remember { mutableStateOf(false) }
 
     val placeholderPainter = painterResource(Res.drawable.compose_multiplatform)
@@ -44,10 +46,10 @@ fun FavoritesScreen(
     // Обновляем список при смене query/filters
     LaunchedEffect(query, filters, userLogin) {
         val all = repository.getMenu(query, filters)
-
-        // Любимое = избранное + свои рецепты
         items = all.filter { it.isFavorite || it.authorHandle.equals(userLogin, ignoreCase = true) }
+        loaded = true
     }
+
 
     Column(modifier = modifier.fillMaxSize()) {
         SearchHeaderBar(
@@ -59,31 +61,36 @@ fun FavoritesScreen(
             hasActiveFilters = filters.isActive
         )
 
-        if (items.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Нет рецептов", color = AppColors.Placeholder)
+        when {
+            !loaded -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 14.dp, end = 14.dp,
-                    top = 14.dp,
-                    bottom = 14.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(items, key = { it.id }) { r ->
-                    RecipeGridCard(
-                        item = r,
-                        painter = placeholderPainter,
-                        onClick = { onRecipeClick(r.id) }
-                    )
+            items.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Нет рецептов", color = AppColors.Placeholder)
+                }
+            }
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 14.dp, end = 14.dp,
+                        top = 14.dp,
+                        bottom = 14.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(items, key = { it.id }) { r ->
+                        RecipeGridCard(
+                            item = r,
+                            painter = placeholderPainter,
+                            onClick = { onRecipeClick(r.id) }
+                        )
+                    }
                 }
             }
         }

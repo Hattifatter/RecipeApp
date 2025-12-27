@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.CircularProgressIndicator
 import ru.recipeapp.features.recipes.components.FiltersDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,6 +18,7 @@ import org.jetbrains.compose.resources.painterResource
 import recipeapp.composeapp.generated.resources.Res
 import recipeapp.composeapp.generated.resources.compose_multiplatform
 import ru.recipeapp.designsystem.components.SearchHeaderBar
+import ru.recipeapp.designsystem.theme.AppColors
 import ru.recipeapp.features.recipes.components.RecipeFiltersDialog
 import ru.recipeapp.features.recipes.components.RecipeGridCard
 import ru.recipeapp.features.recipes.data.RecipesRepository
@@ -35,11 +37,15 @@ fun MenuScreen(
     val placeholderPainter = painterResource(Res.drawable.compose_multiplatform)
 
     var items by remember { mutableStateOf<List<RecipeCardUi>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var showFiltersDialog by remember { mutableStateOf(false) }
+
 
     // Загрузка/обновление списка при смене query/filters
     LaunchedEffect(query, filters) {
+        loaded = false
         items = repository.getMenu(query, filters)
+        loaded = true
     }
 
     Column(modifier.fillMaxSize()) {
@@ -52,37 +58,43 @@ fun MenuScreen(
             hasActiveFilters = filters.isActive
         )
 
-        if (items.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Нет рецептов",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
+        when {
+            !loaded -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 14.dp, end = 14.dp,
-                    top = 14.dp,
-                    bottom = 92.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                items(items, key = { it.id }) { r ->
-                    RecipeGridCard(
-                        item = r,
-                        painter = placeholderPainter,
-                        onClick = { onRecipeClick(r.id) }
-                    )
+
+            items.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Нет рецептов", color = AppColors.Placeholder)
+                }
+            }
+            else -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 14.dp, end = 14.dp,
+                        top = 14.dp,
+                        bottom = 92.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(items, key = { it.id }) { r ->
+                        RecipeGridCard(
+                            item = r,
+                            painter = placeholderPainter,
+                            onClick = { onRecipeClick(r.id) }
+                        )
+                    }
                 }
             }
         }
