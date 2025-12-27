@@ -2,11 +2,9 @@ package ru.recipeapp.platform
 
 import androidx.compose.runtime.Composable
 
-interface ImagePicker {
-    fun launch()
-}
-
 @Composable
-expect fun rememberImagePicker(
+actual fun rememberImagePicker(
     onImagePicked: (ByteArray) -> Unit
-): ImagePicker
+): ImagePicker = object : ImagePicker {
+    override fun launch() {}
+}

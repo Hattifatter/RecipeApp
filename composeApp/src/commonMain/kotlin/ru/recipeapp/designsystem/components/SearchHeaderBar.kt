@@ -31,16 +31,7 @@ fun SearchHeaderBar(
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Назад (в макете есть всегда)
-            Text(
-                text = "‹",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = Color.Black.copy(alpha = if (onBack == null) 0.35f else 1f),
-                modifier = Modifier
-                    .padding(end = 10.dp)
-                    .clickable(enabled = onBack != null) { onBack?.invoke() }
-            )
-
+            Spacer(Modifier.width(34.dp))
             // Поиск
             TextField(
                 value = query,

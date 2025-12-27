@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import ru.recipeapp.data.SampleData
+import kotlinx.coroutines.launch
 import ru.recipeapp.designsystem.components.AppTopBar
 import ru.recipeapp.features.auth.AuthScreen
 import ru.recipeapp.features.profile.SettingsScreen
@@ -14,7 +15,6 @@ import ru.recipeapp.features.recipes.AddEditRecipeScreen
 import ru.recipeapp.features.recipes.MenuScreen
 import ru.recipeapp.features.recipes.RecipeDetailsScreen
 import ru.recipeapp.features.recipes.RecipeUi
-import androidx.compose.runtime.produceState
 import ru.recipeapp.navigation.MainTab
 import ru.recipeapp.navigation.Route
 import ru.recipeapp.navigation.rememberNavState
@@ -22,6 +22,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import ru.recipeapp.features.recipes.CreateRecipeScreen
+import ru.recipeapp.features.favorites.FavoritesScreen
+
 
 
 
@@ -69,9 +71,12 @@ fun AppRoot() {
             // Вкладка Menu сама рисует свою шапку (SearchHeaderBar),
             // поэтому AppTopBar там НЕ показываем, иначе будет двойная шапка.
             val showTopBar = when (route) {
-                is Route.Main -> route.tab != MainTab.Menu && route.tab != MainTab.Add
+                is Route.Main -> route.tab != MainTab.Menu &&
+                        route.tab != MainTab.Add &&
+                        route.tab != MainTab.Favorites
                 else -> true
             }
+
 
 
             Scaffold(
@@ -114,18 +119,23 @@ fun AppRoot() {
                             )
 
 
-                            MainTab.Favorites -> {
-                                // пока заглушка
-                                Text("Любимое — позже", modifier = Modifier.padding(padding))
-                            }
+                            MainTab.Favorites -> FavoritesScreen(
+                                repository = recipesRepo,
+                                userLogin = SampleData.userLogin,
+                                onBack = null,
+                                onRecipeClick = { id -> nav.navigate(Route.RecipeDetails(id)) },
+                                modifier = Modifier.padding(padding)
+                            )
+
                         }
                     }
 
                     is Route.RecipeDetails -> {
+                        val scope = rememberCoroutineScope()
                         var recipe by remember(route.recipeId) { mutableStateOf<RecipeUi?>(null) }
 
                         LaunchedEffect(route.recipeId) {
-                            recipe = recipesRepo.getRecipe(route.recipeId)  // suspend
+                            recipe = recipesRepo.getRecipe(route.recipeId)
                         }
 
                         if (recipe == null) {
@@ -134,11 +144,17 @@ fun AppRoot() {
                             RecipeDetailsScreen(
                                 recipe = recipe!!,
                                 onEdit = { nav.navigate(Route.AddEditRecipe(recipe!!.id)) },
-                                onToggleFavorite = { /* позже: recipesRepo.toggleFavorite(recipe!!.id) */ },
+                                onToggleFavorite = {
+                                    scope.launch {
+                                        recipesRepo.toggleFavorite(recipe!!.id)
+                                        recipe = recipesRepo.getRecipe(recipe!!.id) // обновим UI
+                                    }
+                                },
                                 modifier = Modifier.padding(padding)
                             )
                         }
                     }
+
 
 
                     is Route.AddEditRecipe -> {

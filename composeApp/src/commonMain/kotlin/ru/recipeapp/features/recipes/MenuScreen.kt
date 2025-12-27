@@ -17,6 +17,7 @@ import org.jetbrains.compose.resources.painterResource
 import recipeapp.composeapp.generated.resources.Res
 import recipeapp.composeapp.generated.resources.compose_multiplatform
 import ru.recipeapp.designsystem.components.SearchHeaderBar
+import ru.recipeapp.features.recipes.components.RecipeFiltersDialog
 import ru.recipeapp.features.recipes.components.RecipeGridCard
 import ru.recipeapp.features.recipes.data.RecipesRepository
 
@@ -88,13 +89,9 @@ fun MenuScreen(
     }
 
     if (showFiltersDialog) {
-        FiltersDialog(
+        RecipeFiltersDialog(
             current = filters,
-            categories = listOf("Фастфуд", "Завтрак", "Обед", "Ужин", "Десерт", "Суп", "ПП", "Салат"),
-            onApply = {
-                filters = it
-                showFiltersDialog = false
-            },
+            onApply = { filters = it; showFiltersDialog = false },
             onDismiss = { showFiltersDialog = false }
         )
     }

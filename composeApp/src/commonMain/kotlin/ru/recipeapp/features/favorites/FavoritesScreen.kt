@@ -1,44 +1,99 @@
 package ru.recipeapp.features.favorites
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import ru.recipeapp.designsystem.theme.spacing
-import ru.recipeapp.features.recipes.RecipeUi
-import ru.recipeapp.features.recipes.components.RecipeCard
+import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
+import recipeapp.composeapp.generated.resources.Res
+import recipeapp.composeapp.generated.resources.compose_multiplatform
+import ru.recipeapp.designsystem.components.SearchHeaderBar
+import ru.recipeapp.designsystem.theme.AppColors
+import ru.recipeapp.features.recipes.RecipeCardUi
+import ru.recipeapp.features.recipes.RecipeFilters
+import ru.recipeapp.features.recipes.components.RecipeGridCard
+import ru.recipeapp.features.recipes.data.RecipesRepository
+import androidx.compose.material3.Button
+import ru.recipeapp.features.recipes.components.RecipeFiltersDialog
 
 @Composable
 fun FavoritesScreen(
-    favorites: List<RecipeUi>,
+    repository: RecipesRepository,
+    userLogin: String,
+    onBack: (() -> Unit)?,
     onRecipeClick: (Long) -> Unit,
-    onToggleFavorite: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val s = MaterialTheme.spacing
+    var query by rememberSaveable { mutableStateOf("") }
+    var filters by remember { mutableStateOf(RecipeFilters()) }
+    var items by remember { mutableStateOf<List<RecipeCardUi>>(emptyList()) }
+    var showFiltersDialog by remember { mutableStateOf(false) }
 
-    if (favorites.isEmpty()) {
-        Column(modifier.fillMaxSize().padding(s.m)) {
-            Text("Пока нет избранных рецептов", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(s.s))
-            Text("Добавь рецепт в избранное, чтобы он появился здесь.")
-        }
-        return
+    val placeholderPainter = painterResource(Res.drawable.compose_multiplatform)
+
+    // Обновляем список при смене query/filters
+    LaunchedEffect(query, filters, userLogin) {
+        val all = repository.getMenu(query, filters)
+
+        // Любимое = избранное + свои рецепты
+        items = all.filter { it.isFavorite || it.authorHandle.equals(userLogin, ignoreCase = true) }
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize().padding(s.m),
-        verticalArrangement = Arrangement.spacedBy(s.s)
-    ) {
-        items(favorites, key = { it.id }) { r ->
-            RecipeCard(
-                recipe = r,
-                onClick = { onRecipeClick(r.id) },
-                onToggleFavorite = { onToggleFavorite(r.id) }
-            )
+    Column(modifier = modifier.fillMaxSize()) {
+        SearchHeaderBar(
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = "Поиск",
+            onBack = onBack,
+            onFilterClick = { showFiltersDialog = true },
+            hasActiveFilters = filters.isActive
+        )
+
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Нет рецептов", color = AppColors.Placeholder)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 14.dp, end = 14.dp,
+                    top = 14.dp,
+                    bottom = 14.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(items, key = { it.id }) { r ->
+                    RecipeGridCard(
+                        item = r,
+                        painter = placeholderPainter,
+                        onClick = { onRecipeClick(r.id) }
+                    )
+                }
+            }
         }
+    }
+
+    if (showFiltersDialog) {
+        RecipeFiltersDialog(
+            current = filters,
+            onApply = { filters = it; showFiltersDialog = false },
+            onDismiss = { showFiltersDialog = false }
+        )
     }
 }

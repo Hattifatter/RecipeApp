@@ -27,7 +27,7 @@ kotlin {
     
     sourceSets {
         androidMain.dependencies {
-            implementation(compose.preview)
+            implementation("io.coil-kt:coil-compose:2.7.0")
             implementation(libs.androidx.activity.compose)
         }
         commonMain.dependencies {
@@ -76,8 +76,3 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 }
-
-dependencies {
-    debugImplementation(compose.uiTooling)
-}
-
