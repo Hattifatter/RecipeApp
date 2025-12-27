@@ -9,5 +9,6 @@ data class Recipe(
     val ingredients: String,
     val description: String,
     val authorLogin: String,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val tagId: Int? = null
 )

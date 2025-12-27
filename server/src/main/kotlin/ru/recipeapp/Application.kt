@@ -14,7 +14,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import ru.recipeapp.models.Recipe
 import ru.recipeapp.models.LoginRequest
-
+import io.ktor.http.content.*
+import io.ktor.server.http.content.*
+import java.io.File
 
 
 fun main() {
@@ -37,6 +39,40 @@ fun Application.module() {
             call.respondText("Сервер запущен!")
         }
 
+        // 1. Делаем папку "uploads" доступной извне по ссылке
+        static("/uploads") {
+            files("uploads")
+        }
+
+        // 2. Эндпоинт для загрузки фото из галереи
+        post("/upload-image") {
+            val multipart = call.receiveMultipart()
+            var fileName = ""
+
+            multipart.forEachPart { part ->
+                if (part is PartData.FileItem) {
+                    // Создаем уникальное имя файла
+                    val name = "${System.currentTimeMillis()}-${part.originalFileName}"
+                    val fileBytes = part.streamProvider().readBytes()
+
+                    // Создаем папку, если ее нет
+                    val folder = File("uploads")
+                    if (!folder.exists()) folder.mkdirs()
+
+                    // Сохраняем байты в файл
+                    File("uploads/$name").writeBytes(fileBytes)
+                    fileName = "/uploads/$name" // Относительный путь для БД
+                }
+                part.dispose()
+            }
+
+            if (fileName.isNotEmpty()) {
+                call.respond(mapOf("imageUrl" to fileName))
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Файл не получен")
+            }
+        }
+
         // ЛЕНТА
         get("/recipes") {
             val recipes = transaction {
@@ -47,7 +83,8 @@ fun Application.module() {
                         ingredients = it[RecipesTable.ingredients],
                         description = it[RecipesTable.description],
                         authorLogin = it[RecipesTable.authorLogin],
-                        imageUrl = it[RecipesTable.imageUrl] // Исправлен маппинг
+                        imageUrl = it[RecipesTable.imageUrl],
+                        tagId = it[RecipesTable.tagId]
                     )
                 }
             }
@@ -86,7 +123,8 @@ fun Application.module() {
                             ingredients = it[RecipesTable.ingredients],
                             description = it[RecipesTable.description],
                             authorLogin = it[RecipesTable.authorLogin],
-                            imageUrl = it[RecipesTable.imageUrl]
+                            imageUrl = it[RecipesTable.imageUrl],
+                            tagId = it[RecipesTable.tagId]
                         )
                     }
             }
@@ -140,6 +178,7 @@ fun Application.module() {
                         it[description] = recipe.description
                         it[authorLogin] = recipe.authorLogin
                         it[imageUrl] = recipe.imageUrl
+                        it[tagId] = recipe.tagId
                     }
                 }
                 call.respond(HttpStatusCode.Created, "Рецепт добавлен")
