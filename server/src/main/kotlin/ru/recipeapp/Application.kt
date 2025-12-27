@@ -15,12 +15,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import ru.recipeapp.models.Recipe
 import ru.recipeapp.models.LoginRequest
 
-// Описание таблицы избранного (связка пользователя и рецепта)
-object SavedRecipesTable : Table("saved_recipes") {
-    val userLogin = varchar("user_login", 50).references(UsersTable.login)
-    val recipeId = integer("recipe_id").references(RecipesTable.id)
-    override val primaryKey = PrimaryKey(userLogin, recipeId)
-}
+
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
@@ -42,7 +37,7 @@ fun Application.module() {
             call.respondText("Сервер запущен!")
         }
 
-        // 1. ЛЕНТА: Получение всех рецептов
+        // ЛЕНТА
         get("/recipes") {
             val recipes = transaction {
                 RecipesTable.selectAll().map {
@@ -51,14 +46,15 @@ fun Application.module() {
                         title = it[RecipesTable.title],
                         ingredients = it[RecipesTable.ingredients],
                         description = it[RecipesTable.description],
-                        authorLogin = it[RecipesTable.authorLogin]
+                        authorLogin = it[RecipesTable.authorLogin],
+                        imageUrl = it[RecipesTable.imageUrl] // Исправлен маппинг
                     )
                 }
             }
             call.respond(recipes)
         }
 
-        // 2. ИЗБРАННОЕ: Сохранить рецепт к себе в профиль
+        // ИЗБРАННОЕ
         post("/recipes/save") {
             try {
                 val params = call.receive<Map<String, String>>()
@@ -77,7 +73,7 @@ fun Application.module() {
             }
         }
 
-        // 3. ПРОФИЛЬ: Получить только сохраненные рецепты пользователя
+        // ПРОФИЛЬ
         get("/recipes/saved/{login}") {
             val login = call.parameters["login"] ?: return@get call.respond(HttpStatusCode.BadRequest)
             val saved = transaction {
@@ -89,7 +85,8 @@ fun Application.module() {
                             title = it[RecipesTable.title],
                             ingredients = it[RecipesTable.ingredients],
                             description = it[RecipesTable.description],
-                            authorLogin = it[RecipesTable.authorLogin]
+                            authorLogin = it[RecipesTable.authorLogin],
+                            imageUrl = it[RecipesTable.imageUrl]
                         )
                     }
             }
@@ -142,6 +139,7 @@ fun Application.module() {
                         it[ingredients] = recipe.ingredients
                         it[description] = recipe.description
                         it[authorLogin] = recipe.authorLogin
+                        it[imageUrl] = recipe.imageUrl
                     }
                 }
                 call.respond(HttpStatusCode.Created, "Рецепт добавлен")
@@ -161,7 +159,6 @@ fun initDatabase() {
     )
 
     transaction {
-        // Добавили новую таблицу в список создания
         SchemaUtils.create(UsersTable, RecipesTable, SavedRecipesTable)
     }
 }
